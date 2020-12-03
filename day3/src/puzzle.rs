@@ -1,30 +1,30 @@
 #[derive(Debug)]
 pub struct Puzzle {
-    pub width: usize,
+    internal_width: usize,
     pub height: usize,
     trees: Vec<bool>,
 }
 
 impl Puzzle {
     pub fn is_tree(&self, x: usize, y: usize) -> bool {
-        let wrapped_x = x % self.width;
-        let position = y * self.width + wrapped_x;
+        let wrapped_x = x % self.internal_width;
+        let position = y * self.internal_width + wrapped_x;
         return self.trees[position];
     }
 
     pub fn read_from_string(input: &str) -> Puzzle {
-        let mut width = 0;
+        let mut internal_width = 0;
         let mut height = 0;
         let mut trees = vec![];
         for line in input.split("\n") {
-            width = 0;
+            internal_width = 0;
             for character in line.chars() {
                 trees.push(character == '#');
-                width += 1;
+                internal_width += 1;
             }
             height += 1;
         }
-        Puzzle { width: width, height: height, trees: trees }
+        Puzzle { internal_width: internal_width, height: height, trees: trees }
     }
 }
 
