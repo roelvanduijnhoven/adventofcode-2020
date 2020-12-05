@@ -7,7 +7,6 @@ pub struct Seat {
 #[derive(Debug)]
 pub struct InvalidBoardingPassError;
 
-
 impl Seat {
     pub fn from_boarding_pass(boarding_pass: &str) -> Result<Seat, InvalidBoardingPassError> {
         if boarding_pass.len() != 10 {
@@ -43,7 +42,6 @@ impl Seat {
         self.row * 8 + self.column
     }
 }
-
 
 #[cfg(test)]
 mod tests {

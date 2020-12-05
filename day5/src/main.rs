@@ -23,10 +23,8 @@ fn main() {
     for i in 1..ordered_seat_ids.len() - 1 {
         let current = ordered_seat_ids.get(i).unwrap();
         let next = ordered_seat_ids.get(i + 1).unwrap();
-
         if next - current > 1 {
             println!("Found free spot(s) between {} and {}", current, next);
         }
     }
-
 }
