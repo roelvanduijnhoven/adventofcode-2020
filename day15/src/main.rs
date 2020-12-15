@@ -23,5 +23,6 @@ fn memory_game(input: &Vec<usize>, iterations: usize) -> usize {
 fn main() {
     let input = vec![0,6,1,7,2,19,20];
 
-    println!("{}", memory_game(&input, 2020));
+    println!("Solution to part 1 = {}", memory_game(&input, 2020));
+    println!("Solution to part 2 = {}", memory_game(&input, 30000000));
 }
