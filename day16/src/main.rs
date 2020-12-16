@@ -71,10 +71,34 @@ fn parse_ticket(line: &str) -> Option<Ticket> {
     Some(Ticket { fields })
 }
 
+fn is_valid_field(field: usize, rules: &Vec<Rule>) -> bool {
+    for rule in rules {
+        for term in &rule.terms {
+            if field >= term.0 && field <= term.1 {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 fn main() {
-    let (rules, my_ticket, nearby_ticket) = read_input("assets/example.in").unwrap();
+    let (rules, my_ticket, nearby_tickets) = read_input("assets/day16.in").unwrap();
 
     println!("{:?}", rules);
     println!("{:?}", my_ticket);
-    println!("{:?}", nearby_ticket);
+    println!("{:?}", nearby_tickets);
+
+    // Problem 1
+    let mut sum_of_invalid_fields = 0;
+    for ticket in nearby_tickets {
+        for field in ticket.fields {
+            if !is_valid_field(field, &rules) {
+                sum_of_invalid_fields += field;
+            }
+        }
+    }
+
+    println!("Sum of troubled fields is {}", sum_of_invalid_fields);
 }
