@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 
 struct BoxGrid {
-    active: HashMap<(isize, isize, isize), bool>,
+    active: HashMap<(isize, isize, isize, isize), bool>,
 }
 
 impl BoxGrid {
@@ -13,11 +13,11 @@ impl BoxGrid {
         }
     }
 
-    fn activate(&mut self, point: &(isize, isize, isize)) {
+    fn activate(&mut self, point: &(isize, isize, isize, isize)) {
         self.active.insert(*point, true);
     }
 
-    fn deactivate(&mut self, point: &(isize, isize, isize)) {
+    fn deactivate(&mut self, point: &(isize, isize, isize, isize)) {
         self.active.remove(point);
     }
 
@@ -31,22 +31,24 @@ impl BoxGrid {
         count
     }
 
-    fn is_active(&self, point: &(isize, isize, isize)) -> bool {
+    fn is_active(&self, point: &(isize, isize, isize, isize)) -> bool {
         match self.active.get(&point) {
             Some(value) => *value,
             None => false
         }
     }
     
-    fn get_neighbors(&self, point: &(isize, isize, isize)) -> Vec<(isize, isize, isize)> {
-        let (x, y, z) = *point;
+    fn get_neighbors(&self, point: &(isize, isize, isize, isize)) -> Vec<(isize, isize, isize, isize)> {
+        let (x, y, z, w) = *point;
 
         let mut neighbors = vec![];
         for an_x in x-1..x+2 {
             for an_y in y-1..y+2 {
                 for an_z in z-1..z+2 {
-                    if x != an_x || y != an_y || z != an_z {
-                        neighbors.push((an_x, an_y, an_z));
+                    for an_w in w-1..w+2 {
+                        if x != an_x || y != an_y || z != an_z || w != an_w {
+                            neighbors.push((an_x, an_y, an_z, an_w));
+                        }
                     }
                 }
             }
@@ -58,13 +60,14 @@ impl BoxGrid {
 
 fn main() {
     let input = fs::read_to_string("assets/day17.in").unwrap();
+    // let input = fs::read_to_string("assets/example.in").unwrap();
 
     let mut cube = BoxGrid::new();
 
     for (y, line) in input.lines().enumerate() {
         for (x, character) in line.chars().enumerate() {
             if character == '#' {
-                cube.activate(&(x as isize, y as isize, 0));
+                cube.activate(&(x as isize, y as isize, 0, 0));
             }
         }
     }
@@ -74,7 +77,7 @@ fn main() {
         
         // Get all unique points that could possible turn.
         // Note: we use a hashmap to avoid duplicates 
-        let mut possible_candidates: HashMap<(isize, isize, isize), bool> = HashMap::new(); 
+        let mut possible_candidates: HashMap<(isize, isize, isize, isize), bool> = HashMap::new(); 
         for (point, state) in &cube.active {
             if !state {
                 continue;
@@ -87,8 +90,8 @@ fn main() {
         }
 
         // Compute what cubes need to flip.
-        let mut activate: Vec<(isize, isize, isize)> = vec![];
-        let mut deactivate: Vec<(isize, isize, isize)> = vec![];
+        let mut activate: Vec<(isize, isize, isize, isize)> = vec![];
+        let mut deactivate: Vec<(isize, isize, isize, isize)> = vec![];
         for (point, _) in possible_candidates {
             let active_neighbors = cube
                 .get_neighbors(&point)
