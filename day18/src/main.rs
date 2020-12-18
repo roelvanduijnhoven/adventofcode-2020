@@ -1,4 +1,3 @@
-use regex::Regex;
 use std::fs;
 
 #[derive(Debug)]
@@ -8,23 +7,13 @@ enum Expression {
     Multiply(Box<Expression>, Box<Expression>),
 }
 
-fn parse_sub(operator: &str, lhs: &str, rhs: &str) -> Expression {
-    // println!("lhs = {}, operator = {}, rhs = {}", lhs, operator, rhs);
-    let lhs = parse(lhs);
-    let rhs = parse(rhs);
-    return match operator {
-        "*" => Expression::Multiply(Box::new(lhs), Box::new(rhs)),
-        "+" => Expression::Plus(Box::new(lhs), Box::new(rhs)),
-        _ => panic!("Unknown operator"),
-    }
-}
-
 fn parse(input: &str) -> Expression {
     if let Ok(value) = input.parse::<isize>() {
         return Expression::Number(value);
     }
 
-    let mut first_operator_position = None;
+    let mut first_multiply_operator_position = None;
+    let mut first_addition_operator_position = None;
     let mut opened_braces = 0;
     for (position, character) in input.chars().rev().enumerate() {
         let position = input.len() - position - 1;
@@ -32,15 +21,36 @@ fn parse(input: &str) -> Expression {
             opened_braces += 1;
         } else if character == '(' {
             opened_braces -= 1;
-        } else if opened_braces == 0 && (character == '*' || character == '+') {
-            first_operator_position = Some(position);
-            break;
+        } else if opened_braces == 0 && character == '*' {
+            first_multiply_operator_position = match first_multiply_operator_position {
+                None => Some(position),
+                Some(value) => Some(value),
+            };
+        } else if opened_braces == 0 && character == '+' {
+            first_addition_operator_position = match first_addition_operator_position {
+                None => Some(position),
+                Some(value) => Some(value),
+            };
         }
     }
 
-    return match first_operator_position {
+    match first_multiply_operator_position {
         Some(pos) => parse_sub(&input[pos .. pos + 1], &input[0..pos - 1], &input[pos + 2..]),
-        None => parse(&input[1..input.len() - 1])
+        None => match first_addition_operator_position {
+            Some(pos) => parse_sub(&input[pos .. pos + 1], &input[0..pos - 1], &input[pos + 2..]),
+            None => parse(&input[1..input.len() - 1]) 
+        }
+    }
+}
+
+
+fn parse_sub(operator: &str, lhs: &str, rhs: &str) -> Expression {
+    let lhs = parse(lhs);
+    let rhs = parse(rhs);
+    return match operator {
+        "*" => Expression::Multiply(Box::new(lhs), Box::new(rhs)),
+        "+" => Expression::Plus(Box::new(lhs), Box::new(rhs)),
+        _ => panic!("Unknown operator"),
     }
 }
 
