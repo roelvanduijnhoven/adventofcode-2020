@@ -16,8 +16,8 @@ fn parse(input: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
     output
 }
 
-fn find_singular(one_of: &HashMap<&str, Vec<&str>>, remaining: &Vec<&str>) -> Option<String> {
-    for (_, candidate_ingredients) in one_of {
+fn find_singular(one_of: &HashMap<&str, Vec<&str>>, remaining: &Vec<&str>) -> Option<(String, String)> {
+    for (allergen, candidate_ingredients) in one_of {
         
         let temp = candidate_ingredients
             .iter()
@@ -26,7 +26,7 @@ fn find_singular(one_of: &HashMap<&str, Vec<&str>>, remaining: &Vec<&str>) -> Op
             .collect::<Vec<&str>>();
 
         if temp.len() == 1 {
-            return Some(String::from(temp[0]));
+            return Some((String::from(temp[0]), String::from(*allergen)));
         }
     }
 
@@ -68,27 +68,25 @@ fn main() {
     }
 
     let mut remaining: Vec<&str> = all_ingredients.clone();
+    let mut list = vec![];
 
     loop {
         let result = find_singular(&one_of, &remaining);
         match result {
-            Some(singular_ingredient) => {      
+            Some((singular_ingredient, allergen)) => {      
                 remaining.retain(|ingredient| ingredient != &singular_ingredient);
+                list.push((singular_ingredient, allergen));
             },
             None => break
         }
     }
+
+    list.sort_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap() );
+
+    let result = list
+        .iter()
+        .map(|(ingredient, _)| String::from(ingredient))
+        .collect::<Vec<String>>();
     
-    println!("{:?}", remaining);
-
-    let mut count = 0;
-    for (ingredients, _) in &contents {
-        for ingredient in ingredients {
-            if remaining.contains(ingredient) {
-                count += 1;
-            }
-        }
-    }
-
-    println!("Found {}", count);
+    println!("{:?}", result.join(","));
 }
