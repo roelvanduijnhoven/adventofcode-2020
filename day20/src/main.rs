@@ -3,10 +3,10 @@ use std::fs;
 
 const PIXELS: usize = 10;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SatelliteTile {
     id: usize,
-    pixels: [bool; PIXELS * PIXELS],
+    pixels: Vec<bool>,
 }
 
 impl SatelliteTile {
@@ -16,7 +16,7 @@ impl SatelliteTile {
         let id_line = lines[0];
         let id = id_line[5..id_line.len() - 1].parse::<usize>().unwrap();
 
-        let mut pixels = [false; PIXELS * PIXELS];
+        let mut pixels = vec![false; PIXELS * PIXELS];
         for (y, line) in lines.iter().skip(1).enumerate() {
             for (x, character) in line.chars().enumerate() {
                 if character == '#' {
@@ -78,117 +78,75 @@ impl SatelliteTile {
     }
 }
 
-#[derive(Debug)]
-struct TileOrientation {
-    tile_id: usize,
-    ccw_nord: usize,
-    ccw_east: usize,
-    ccw_south: usize,
-    ccw_west: usize,
+fn orientations_of(tile: &SatelliteTile) -> Vec<SatelliteTile> {
+    let mut orientations: Vec<SatelliteTile> = vec![];
 
-    cw_nord: usize,
-    cw_east: usize,
-    cw_south: usize,
-    cw_west: usize,
+    orientations.push(tile.clone());
+
+    // Rotations
+    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&tile.pixels, PIXELS) });
+    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&tile.pixels, PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&rotate(&tile.pixels, PIXELS), PIXELS), PIXELS) });
+
+    // Flip it
+    orientations.push(SatelliteTile { id: tile.id, pixels: flip(&tile.pixels, PIXELS) });
+
+    // And now rotate again
+    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&flip(&tile.pixels, PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&flip(&tile.pixels, PIXELS), PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&rotate(&flip(&tile.pixels, PIXELS), PIXELS), PIXELS), PIXELS) });    
+
+    return orientations;
 }
 
-impl TileOrientation {
-    fn new(tile: &SatelliteTile, ccw_nord: usize, ccw_east: usize, ccw_south: usize, ccw_west: usize, cw_nord: usize, cw_east: usize, cw_south: usize, cw_west: usize ) -> TileOrientation {
-        TileOrientation { tile_id: tile.id, ccw_nord, ccw_east, ccw_south, ccw_west, cw_nord, cw_east, cw_south, cw_west }
+fn puzzle_total(orientations: &Vec<SatelliteTile>) -> Option<Vec<SatelliteTile>> {
+    for orientation in orientations {
+        match puzzle(orientations, orientation) {
+            None => continue,
+            value => return value,
+        }
     }
 
-    fn from(tile: &SatelliteTile) -> Vec<TileOrientation> {
-        vec![
-            // Original
-            TileOrientation::new(
-                tile,
-                tile.ccw_nord(), tile.ccw_east(), tile.ccw_south(), tile.ccw_west(),
-                tile.cw_nord(), tile.cw_east(), tile.cw_south(), tile.cw_west()
-            ),
-
-            // Rotation 
-            TileOrientation::new(
-                tile, 
-                tile.ccw_west(), tile.ccw_nord(), tile.ccw_east(), tile.ccw_south(),
-                tile.cw_west(), tile.cw_nord(), tile.cw_east(), tile.cw_south()
-            ),
-            TileOrientation::new(
-                tile,
-                tile.ccw_south(), tile.ccw_west(), tile.ccw_nord(), tile.ccw_east(),
-                tile.cw_south(), tile.cw_west(), tile.cw_nord(), tile.cw_east()
-            ),
-            TileOrientation::new(
-                tile,
-                tile.ccw_east(), tile.ccw_south(), tile.ccw_west(), tile.ccw_nord(),
-                tile.cw_east(), tile.cw_south(), tile.cw_west(), tile.cw_nord()
-            ),
-
-            // Flipped
-            TileOrientation::new(
-                tile,
-                tile.cw_south(), tile.cw_east(), tile.cw_nord(), tile.cw_west(),
-                tile.ccw_south(), tile.ccw_east(), tile.ccw_nord(), tile.ccw_west()
-            ),
-
-            // With its rotations
-            TileOrientation::new(
-                tile, 
-                tile.cw_west(), tile.cw_south(), tile.cw_east(), tile.cw_nord(),
-                tile.ccw_west(), tile.ccw_south(), tile.ccw_east(), tile.ccw_nord()
-            ),
-            TileOrientation::new(
-                tile,
-                tile.cw_nord(), tile.cw_west(), tile.cw_south(), tile.cw_east(),
-                tile.ccw_nord(), tile.ccw_west(), tile.ccw_south(), tile.ccw_east()
-            ),
-            TileOrientation::new(
-                tile,
-                tile.cw_east(), tile.cw_nord(), tile.cw_west(), tile.cw_south(),
-                tile.ccw_east(), tile.ccw_nord(), tile.ccw_west(), tile.ccw_south()
-            ),
-
-            //
-        ]
-    }
+    None
 }
 
-fn puzzle(orientations: &Vec<TileOrientation>, start: &TileOrientation) {
-    let mut used = vec![start.tile_id];
-    let mut pieces = vec![start];
+fn puzzle(orientations: &Vec<SatelliteTile>, start: &SatelliteTile) -> Option<Vec<SatelliteTile>> {
+    let mut used = vec![start.id];
+    let mut pieces = vec![start.clone()];
 
-    println!("===");
-    println!("Start searching with tile {}", start.tile_id);
+    // println!("===");
+    // println!("Start searching with tile {}", start.id);
 
     let per_row = 12;
     for position in 1..(per_row * per_row) {
         let above = if position < per_row {
             None
         } else {
-            Some(pieces[position - per_row])
+            Some(&pieces[position - per_row])
         };
 
         let previous = if (position % per_row) == 0 {
             None
         } else {
-            Some(pieces[position - 1])
+            Some(&pieces[position - 1])
         };
         
-        println!("Previous is {:?}, above is {:?}", previous, above);
+        // println!("Previous is {:?}, above is {:?}", previous, above);
 
         let mut winner = None;
         for orientation in orientations {
-            if used.contains(&orientation.tile_id) {
+            if used.contains(&orientation.id) {
                 continue;
             }
 
             let matches_previous = match previous {
                 None => true,
-                Some(piece) => piece.ccw_east == orientation.cw_west,
+                Some(piece) => piece.ccw_east() == orientation.cw_west(),
             };
 
             let matches_above = match above {
                 None => true,
-                Some(piece) => piece.ccw_south == orientation.cw_nord,
+                Some(piece) => piece.ccw_south() == orientation.cw_nord(),
             };
 
             if matches_above && matches_previous {
@@ -197,20 +155,51 @@ fn puzzle(orientations: &Vec<TileOrientation>, start: &TileOrientation) {
         }
 
         match winner {
-            None => return,
+            None => return None,
             Some(orientation) => {
-                used.push(orientation.tile_id);
-                pieces.push(orientation);
-                println!("Found matching piece {:?}!", orientation);
+                used.push(orientation.id);
+                pieces.push(orientation.clone());
+                // println!("Found matching piece {:?}!", orientation);
             }
         }
     }
 
-    println!("{}", pieces[0].tile_id *  pieces[per_row - 1].tile_id *  pieces[per_row * per_row - per_row].tile_id *  pieces[per_row * per_row - 1].tile_id);
-    panic!("sdf");
+    return Some(pieces);
+}
+
+fn rotate(matrix: &Vec<bool>, n: usize) -> Vec<bool> {
+    let mut ret = vec![false; n * n];
+
+    for i in 0..n {
+        for j in 0..n {
+            ret[j * n + i] = matrix[(n - i - 1) * n + j];
+        }
+    }
+
+    return ret;
+}
+
+fn flip(matrix: &Vec<bool>, n: usize) -> Vec<bool> {
+    let mut ret = vec![false; n * n];
+
+    let half = (n as f32 / 2.0).floor() as usize;
+
+    for y in 0..n {
+        for x in 0..n {
+            let new_y = n - 1 - y;
+            ret[new_y * n + x] = matrix[y * n + x];
+        }
+    }
+
+    ret
 }
 
 fn main() {
+    // let matrix = vec![true, true, false, false, false, true, false, true, false];
+    // println!("Rotated is {:?}", rotate(&matrix, 3));
+    // println!("Rotated is {:?}", flip(&matrix, 3));
+    // panic!("Done!");
+
     let contents = fs::read_to_string("assets/day20.in").unwrap();
 
     let tiles: Vec<SatelliteTile> = contents
@@ -219,30 +208,13 @@ fn main() {
         .collect();
 
     // Look at all possible ways we can position our tiles, so that we don't need to consider rotating them.
-    let mut orientations: Vec<TileOrientation> = vec![];
+    let mut orientations: Vec<SatelliteTile> = vec![];
     for tile in &tiles {
-        for orientation in TileOrientation::from(&tile) {
-            orientations.push(orientation);
+        for orientation in orientations_of(&tile) {
+            orientations.push(orientation.clone());
         }
     }
 
-    // println!("{:#?}", tiles[8].cw_west());
-    // for other in TileOrientation::from(&tiles[0]) {
-    //     println!("{}", other.ccw_east);
-    // }
-
-    // println!("{:#?}", tiles[tiles.len() - 1]);
-    // println!("Orientations {:#?}", &orientations[64..]);
-
-    // let piece = &orientations[64];
-    // println!("{:?}", piece);
-    // for other in &orientations {
-    //     if piece.tile_id != other.tile_id && piece.cw_west == other.cw_south {
-    //         println!("{} fits {}", piece.tile_id, other.tile_id);
-    //     }
-    // }
-
-    for orientation in &orientations {
-        puzzle(&orientations, &orientation);
-    }
+    let winner = puzzle_total(&orientations);
+    println!("{:?}", winner);
 }
