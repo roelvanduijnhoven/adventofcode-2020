@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::fs;
 
 const PIXELS: usize = 10;
+const PER_ROW: usize = 12;
 
 #[derive(Debug, Clone)]
 struct SatelliteTile {
     id: usize,
     pixels: Vec<bool>,
+    orientation: String,
 }
 
 impl SatelliteTile {
@@ -25,7 +27,7 @@ impl SatelliteTile {
             }
         }
 
-        SatelliteTile { id, pixels }
+        SatelliteTile { id, pixels, orientation: String::from("original") }
     }
 
     fn cw_nord(&self) -> usize {
@@ -84,17 +86,17 @@ fn orientations_of(tile: &SatelliteTile) -> Vec<SatelliteTile> {
     orientations.push(tile.clone());
 
     // Rotations
-    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&tile.pixels, PIXELS) });
-    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&tile.pixels, PIXELS), PIXELS) });
-    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&rotate(&tile.pixels, PIXELS), PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { orientation: String::from("90CW"), id: tile.id, pixels: rotate(&tile.pixels, PIXELS) });
+    orientations.push(SatelliteTile { orientation: String::from("180CW"), id: tile.id, pixels: rotate(&rotate(&tile.pixels, PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { orientation: String::from("270CW"), id: tile.id, pixels: rotate(&rotate(&rotate(&tile.pixels, PIXELS), PIXELS), PIXELS) });
 
     // Flip it
-    orientations.push(SatelliteTile { id: tile.id, pixels: flip(&tile.pixels, PIXELS) });
+    orientations.push(SatelliteTile { orientation: String::from("flipped"), id: tile.id, pixels: flip(&tile.pixels, PIXELS) });
 
     // And now rotate again
-    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&flip(&tile.pixels, PIXELS), PIXELS) });
-    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&flip(&tile.pixels, PIXELS), PIXELS), PIXELS) });
-    orientations.push(SatelliteTile { id: tile.id, pixels: rotate(&rotate(&rotate(&flip(&tile.pixels, PIXELS), PIXELS), PIXELS), PIXELS) });    
+    orientations.push(SatelliteTile { orientation: String::from("flipped + 90CW"), id: tile.id, pixels: rotate(&flip(&tile.pixels, PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { orientation: String::from("flipped + 180CW"), id: tile.id, pixels: rotate(&rotate(&flip(&tile.pixels, PIXELS), PIXELS), PIXELS) });
+    orientations.push(SatelliteTile { orientation: String::from("flipped + 270CW"), id: tile.id, pixels: rotate(&rotate(&rotate(&flip(&tile.pixels, PIXELS), PIXELS), PIXELS), PIXELS) });    
 
     return orientations;
 }
@@ -117,7 +119,7 @@ fn puzzle(orientations: &Vec<SatelliteTile>, start: &SatelliteTile) -> Option<Ve
     // println!("===");
     // println!("Start searching with tile {}", start.id);
 
-    let per_row = 12;
+    let per_row = PER_ROW;
     for position in 1..(per_row * per_row) {
         let above = if position < per_row {
             None
@@ -182,8 +184,6 @@ fn rotate(matrix: &Vec<bool>, n: usize) -> Vec<bool> {
 fn flip(matrix: &Vec<bool>, n: usize) -> Vec<bool> {
     let mut ret = vec![false; n * n];
 
-    let half = (n as f32 / 2.0).floor() as usize;
-
     for y in 0..n {
         for x in 0..n {
             let new_y = n - 1 - y;
@@ -215,6 +215,25 @@ fn main() {
         }
     }
 
-    let winner = puzzle_total(&orientations);
-    println!("{:?}", winner);
+    let winner = puzzle_total(&orientations).unwrap();
+
+    // Solution to part 1
+    let f1 = winner[0].id;
+    let f2 = winner[PER_ROW - 1].id;
+    let f3 = winner[PER_ROW * PER_ROW - 1].id;
+    let f4 = winner[PER_ROW * PER_ROW - PER_ROW].id;
+
+    // Now print the resulting image
+    for tile_y in 0..PER_ROW {
+        for y in 1..PIXELS-1 {
+            for tile_index in tile_y * PER_ROW..tile_y * PER_ROW + PER_ROW {
+                for x in 1..PIXELS-1 {
+                    let c = if winner[tile_index].pixels[y * PIXELS + x] { '#' } else { '.' };
+                    print!("{}", c);
+                }
+                print!("");
+            }
+            print!("\n");                 
+        }              
+    }
 }
