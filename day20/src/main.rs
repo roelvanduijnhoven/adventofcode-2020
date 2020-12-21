@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::fs;
+use regex::Regex;
 
 const PIXELS: usize = 10;
 const PER_ROW: usize = 12;
@@ -194,6 +194,48 @@ fn flip(matrix: &Vec<bool>, n: usize) -> Vec<bool> {
     ret
 }
 
+fn find_monster(image: &Vec<bool>, dimension: usize) {
+    println!("Start!");
+
+    let mut output = String::new();
+    for y in 0..dimension {
+        for x in 0..dimension {
+            let c = if image[y * dimension + x] { '#' } else { '.' };
+            output.push(c);
+        }
+        output.push_str("\n");
+    }
+
+    let first_line  = Regex::new(r"..................#.").unwrap();
+    let second_line = Regex::new(r"#....##....##....###").unwrap();
+    let third_line  = Regex::new(r".#..#..#..#..#..#...").unwrap();
+    for second_line_match in second_line.find_iter(&output) {
+        if second_line_match.start() < dimension {
+            continue;
+        }
+
+        match third_line.find_at(&output, second_line_match.start() + dimension) {
+            Some(third_line_match) => {
+                match first_line.find_at(&output, (second_line_match.start() - dimension - 1) as usize) {
+                    Some(first_line_match) => {
+                        if first_line_match.start() != second_line_match.start() - dimension - 1 {
+                            continue;
+                        }
+
+                        if third_line_match.start() != second_line_match.start() + dimension + 1 {
+                            continue;
+                        }
+                        
+                        println!("We found a sea monster!");
+                    },
+                    None => (),
+                };
+            },
+            None => (),
+        };
+    }
+}
+
 fn main() {
     // let matrix = vec![true, true, false, false, false, true, false, true, false];
     // println!("Rotated is {:?}", rotate(&matrix, 3));
@@ -223,17 +265,35 @@ fn main() {
     let f3 = winner[PER_ROW * PER_ROW - 1].id;
     let f4 = winner[PER_ROW * PER_ROW - PER_ROW].id;
 
-    // Now print the resulting image
+    // Now construct the image
+    let mut image = vec![];
     for tile_y in 0..PER_ROW {
         for y in 1..PIXELS-1 {
             for tile_index in tile_y * PER_ROW..tile_y * PER_ROW + PER_ROW {
                 for x in 1..PIXELS-1 {
-                    let c = if winner[tile_index].pixels[y * PIXELS + x] { '#' } else { '.' };
-                    print!("{}", c);
+                    image.push(winner[tile_index].pixels[y * PIXELS + x])
                 }
-                print!("");
             }
-            print!("\n");                 
         }              
     }
+
+    let mut count = 0;
+    for i in &image {
+        if *i {
+            count += 1;
+        }
+    }
+
+    println!("There are {} # tiles.", count);
+
+    // Find sea monsters in every rotation
+    let dimesion: usize = 12 * 8;
+    find_monster(&image, dimesion);
+    find_monster(&rotate(&image.clone(), dimesion), dimesion);
+    find_monster(&rotate(&rotate(&image.clone(), dimesion), dimesion), dimesion);
+    find_monster(&rotate(&rotate(&rotate(&image.clone(), dimesion), dimesion), dimesion), dimesion);
+    find_monster(&flip(&image.clone(), dimesion), dimesion);
+    find_monster(&rotate(&flip(&image.clone(), dimesion), dimesion), dimesion);
+    find_monster(&rotate(&rotate(&flip(&image.clone(), dimesion), dimesion), dimesion), dimesion);
+    find_monster(&rotate(&rotate(&rotate(&flip(&image.clone(), dimesion), dimesion), dimesion), dimesion), dimesion);
 }
